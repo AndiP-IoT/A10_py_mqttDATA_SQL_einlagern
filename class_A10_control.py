@@ -2,12 +2,13 @@
 # coding: utf8
 import builtins
 import logging
+import inspect
 from collections import defaultdict
 from datetime import datetime
 import time
 import copy
 heat_state_old = -999					## Initialisierung für 1. Lauf
-heat_state_new = -999					## Initialisierung für 1. Lauf
+heat_state_ist = -999					## Initialisierung für 1. Lauf
 # data_of_this_topic_memory = -999		## Initialisierung für 1. Lauf
 
 class process_control:
@@ -42,19 +43,11 @@ class process_control:
 		"""
 		# nonlocal data_of_this_topic_memory
 		global heat_state_old
-		global heat_state_new
-		# global data_of_this_topic_memory
-
-		# if any(debug_level_str in {"Temperierung"} for debug_level_str in builtins.debug_info_level):
-			# ##  lokalSQL remoteSQL Temperierung cooling frost mega2560 doorbell mqtt_publish
-			# print("heat_state_old # data_of_this_topic_memory # data_of_this_topic",heat_state_old," # ",data_of_this_topic_memory," # ",data_of_this_topic)
-
-		# if data_of_this_topic==-999 :  		## -999 = Initialisierung bei 1. Lauf
-			# return -999		## do nothing
-		# if data_of_this_topic_memory==-999 :	## Initialisierung bei 1. Lauf
-			# data_of_this_topic_memory=data_of_this_topic
-			# heat_state_old=0
-			# return -999		## do nothing
+		global heat_state_ist
+		if any(debug_level_str in {"Temperierung"} for debug_level_str in builtins.debug_info_level):
+			##  lokalSQL remoteSQL Temperierung cooling frost mega2560 doorbell mqtt_publish mqtt print_incomming_data cloud
+			# print(inspect.stack()[1][1],":",inspect.stack()[1][2],":",inspect.stack()[1][3])
+			print ("            ###############"+__file__+":"+str(inspect.currentframe().f_lineno)+"  -> check_Temperierung_time START   ##")
 
 
 		month_now = int(datetime.today().strftime('%m'))
@@ -70,58 +63,82 @@ class process_control:
 			time_on=self.Control_config["Temperierung"]["on"]["mo-fr_time"]
 			time_off=self.Control_config["Temperierung"]["off"]["mo-fr_time"]
 		if any(debug_level_str in {"Temperierung"} for debug_level_str in builtins.debug_info_level):
-			print("            check_Temperierung_time: Soll einschalten um (time_on) ",time_on," Uhr (Monat noch nicht ausgewertet)")
-
+			print("                           check_Temperierung_time->Vorgabe: Sollte einschalten (month_set_on) ",month_set_on," ")
+			print("                           check_Temperierung_time->Vorgabe: Sollte einschalten (time_on) ",time_on," Uhr (noch nichts ausgewertet)")
+			print("                           check_Temperierung_time->info: heat_state_ist=",heat_state_ist," heat_state_old=", heat_state_old)
+			print()
 		if month_now <= month_set_off or month_now >= month_set_on: ### nur in Wintermonaten
 			time_window=0
 			if any(debug_level_str in {"Temperierung"} for debug_level_str in builtins.debug_info_level):
-				print("            check_Temperierung_time: Monat, um zu Heizen = OK")
-
+				print("                           check_Temperierung_time: Monat, um zu Heizen = OK")
+				print()
 
 			if time_on>time_off:		## Startzeit vor Mitternacht / Ende nach Mitternacht
 				if any(debug_level_str in {"Temperierung"} for debug_level_str in builtins.debug_info_level):
-					print("            check_Temperierung_time: time_on>time_off (über Mitternacht)",time_now," # ",time_on," > ",time_off)
+					print("                           check_Temperierung_time (über Mitternacht): time_on (",time_on,") - time_now (",time_now,") - time_off (",time_off,")")
 				if time_now>=time_on or time_now<=time_off:
 					if any(debug_level_str in {"Temperierung"} for debug_level_str in builtins.debug_info_level):
-						print("            check_Temperierung_time: Im Zeitfenster (OR)")
+						print("                           check_Temperierung_time (über Mitternacht): Ist im Zeitfenster -> Heizen! : time_window=",time_window)
 					time_window=1
+				else:
+					if any(debug_level_str in {"Temperierung"} for debug_level_str in builtins.debug_info_level):
+						print("                           check_Temperierung_time (über Mitternacht): Ist NICHT im Zeitfenster -> NICHT Heizen: time_window=",time_window)
+
 			else:						## Startzeit nach Mitternacht / Ende nach Mitternacht
 				if any(debug_level_str in {"Temperierung"} for debug_level_str in builtins.debug_info_level):
-					print("            check_Temperierung_time: Zeit now:",time_now,"time_on<time_off",time_on,"< ",time_off)
+					print("                           check_Temperierung_time (nach Mitternacht): time_on (",time_on,") - time_now (",time_now,") - time_off (",time_off,")")
 				if time_now>=time_on and time_now<=time_off:
 					if any(debug_level_str in {"Temperierung"} for debug_level_str in builtins.debug_info_level):
-						print("            check_Temperierung_time: Im Zeitfenster (AND)")
+						print("                           check_Temperierung_time (nach Mitternacht): Ist im Zeitfenster -> Heizen! : time_window=",time_window)
 					time_window=1
+				else:
+					if any(debug_level_str in {"Temperierung"} for debug_level_str in builtins.debug_info_level):
+						print("                           check_Temperierung_time (nach Mitternacht): Ist NICHT im Zeitfenster -> NICHT Heizen: time_window=",time_window)
 
-
+			if any(debug_level_str in {"Temperierung"} for debug_level_str in builtins.debug_info_level):
+				print("                           check_Temperierung_time: time_window:",time_window)
 			if 	time_window == 1 :
-				heat_state_new=1
-				# if any(debug_level_str in {"Temperierung"} for debug_level_str in builtins.debug_info_level):
-					# print("            check_Temperierung_time: time_window OK  heat_state_new 1")
+				heat_state_ist=1
+				if any(debug_level_str in {"Temperierung"} for debug_level_str in builtins.debug_info_level):
+					print("                           check_Temperierung_time: time_window OK -> heat_state_ist=1")
 			else:
-				heat_state_new=0
-				# if any(debug_level_str in {"Temperierung"} for debug_level_str in builtins.debug_info_level):
-					# print("            check_Temperierung_time: heat_state_new 0")
-
+				heat_state_ist=0
+				if any(debug_level_str in {"Temperierung"} for debug_level_str in builtins.debug_info_level):
+					print("                           check_Temperierung_time:  time_window NOT OK -> heat_state_ist=0")
+		else:
+			if any(debug_level_str in {"Temperierung"} for debug_level_str in builtins.debug_info_level):
+				print("                           check_Temperierung_time: Monat, um zu Heizen = NICHT OK (keine Zeit Überprüfung)")
 
 		if any(debug_level_str in {"Temperierung"} for debug_level_str in builtins.debug_info_level):
-			print("            check_Temperierung_time: heat_state_new=",heat_state_new," heat_state_old=", heat_state_old)
+			print("                           check_Temperierung_time: heat_state_ist=",heat_state_ist," heat_state_old=", heat_state_old)
+		if (heat_state_old == -999):
+			heating_out=0
+			if any(debug_level_str in {"Temperierung"} for debug_level_str in builtins.debug_info_level):
+				print("                           check_Temperierung_time: heat_state_old ist -999!!!")
+		else:
+			if heat_state_ist > heat_state_old :	# auf ON -> +Flanke
+				if any(debug_level_str in {"Temperierung"} for debug_level_str in builtins.debug_info_level):
+					print("                           check_Temperierung_time: heating_out =1 -> Einschalten")
+				# self.Control_config["Temperierung"]["heat_state_old"]=data_of_this_topic
+				# data_of_this_topic_memory=data_of_this_topic
+				heating_out=1
+			elif heat_state_ist<heat_state_old :	# auf OLD STATE -> -Flanke
+				if any(debug_level_str in {"Temperierung"} for debug_level_str in builtins.debug_info_level):
+					print("                           check_Temperierung_time: heating_out = -1 -> Ausschalten")
+				# topic_out=self.Control_config["Temperierung"]["heat_state_old"]
+				# topic_out=int(data_of_this_topic_memory)
+				heating_out=-1
+			else:			# keine Änderung (in der Zeit)
+				if any(debug_level_str in {"Temperierung"} for debug_level_str in builtins.debug_info_level):
+					print("                           check_Temperierung_time: heating_out =0  -> Keine Änderung")
+				heating_out=0
 
+		heat_state_old = heat_state_ist
 
-		if heat_state_new > heat_state_old :	# auf ON -> +Flanke
-			# self.Control_config["Temperierung"]["old_status"]=data_of_this_topic
-			# data_of_this_topic_memory=data_of_this_topic
-			heat_state_out=1
-		elif heat_state_new<heat_state_old :	# auf OLD STATE -> -Flanke
-			# topic_out=self.Control_config["Temperierung"]["old_status"]
-			# topic_out=int(data_of_this_topic_memory)
-			heat_state_out=-1
-		else:			# keine Änderung (in der Zeit)
-			heat_state_out=0
-		heat_state_old = heat_state_new
 		if any(debug_level_str in {"Temperierung"} for debug_level_str in builtins.debug_info_level):
-			print("            check_Temperierung_time: returnvalue heat_state_out",heat_state_out)
-		return heat_state_out	## 1 switch ON   // -1 =  switch OFF  // 0 do nothing
+			print("                           check_Temperierung_time: returnvalue heating_out=",heating_out)
+			print("            ###############"+__file__+":"+str(inspect.currentframe().f_lineno)+"  -> check_Temperierung_time END   ##")
+		return heating_out	## 1 switch ON   // -1 =  switch OFF  // 0 do nothing
 
 
 class bcolors:

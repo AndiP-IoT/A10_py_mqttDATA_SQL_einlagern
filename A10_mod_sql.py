@@ -2,6 +2,7 @@
 # coding: utf8
 import builtins
 import logging
+import inspect
 import time
 
 
@@ -20,7 +21,7 @@ def make_SQLstring(chart_nr,SENSOR_config_array):
 	"""
 	if any(debug_level_str in {"lokalSQL","remoteSQL"} for debug_level_str in builtins.debug_info_level):
 		##  lokalSQL remoteSQL Temperierung cooling frost mega2560 doorbell mqtt_publish mqtt print_incomming_data
-		print("##########   A10_mod_sql->make_SQLstring called    ##")
+		print("               ###############"+__file__+":"+str(inspect.currentframe().f_lineno)+" -> make_SQLstring")
 	table=SENSOR_config_array["chartDBStuff"][chart_nr]["DBTable_name"]
 	sql_key=""
 	sql_val=""

@@ -2,6 +2,7 @@
 # coding: utf8
 import builtins
 import logging
+import inspect
 from collections import defaultdict
 import time
 import copy
@@ -115,7 +116,7 @@ class deal_with_sensorData:
 			return -666
 		########  ACHTUNG : das Topic muß in DB eingetragen sein !!!!!
 
-	def data_insert(self,topic,val_string,Sensor_data):
+	def xxxxxxxxxxxxxxxxxdata_insert(self,topic,val_string,Sensor_data):
 		"""
 			Takes the data of a sensors (topic). The value will be
 			stored in in config_data["Sensors"][topic]["val_aktuell"]

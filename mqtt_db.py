@@ -1,16 +1,18 @@
 #!/usr/bin/env python
 # coding: utf8
 import builtins
-builtins.debug_info_level = {"remoteSQL",}
-	##  lokalSQL remoteSQL Temperierung cooling frost mega2560 doorbell mqtt_publish mqtt print_incomming_data
-
+builtins.debug_info_level = {"Temperierung"}
+# builtins.debug_info_level = {"Temperierung","",""}
+	##  lokalSQL remoteSQL Temperierung cooling frost mega2560 doorbell mqtt_publish mqtt print_incomming_data cloud gpio
 
 import logging
+import inspect
 import time
 import datetime
 from collections import defaultdict
 from time import sleep
 import paho.mqtt.client as paho
+import A10_mod_ds1820 as mod_DS1820
 import A10_mod_mqtt as mod_mqtt
 import A10_mod_sensor as mod_sensoren
 import A10_mod_sql as mod_sql
@@ -90,12 +92,13 @@ Sensoren_def = {
 "Heiz/DS1820/287E71470A000039" :{"name":"Heiz_RL"},
 "Heiz/DS1820/286B08480A00008D" :{"name":"Puf_oben"},
 "Ofen/DS1820/2878DB470A000005" :{"name":"t_WZ_o"},
+"nodered/DS1820/10-000802e0ff5e" :{"name":"t_WZ_t"},
 "Ofen/DS1820/280A21480A000072" :{"name":"Ofen_kessel"},
 "Ofen/stat/Servo" :{"name":"Ofen_servo"},
-"Heiz/DI/Heiz_P_ist" :{"name":"HeizP_ist"},
-"Heiz/DI/Solar_P_ist" :{"name":"SolarP_ist"},
-"Ofen/stat/Kesselpumpe" :{"name":"OfenP_ist"},
-"Heiz/stat/Heiz_HA0" :{"name":"HeizP_HA0_ist","val_direkt":1},
+"Heiz/DI/Heiz_P_ist" :{"name":"Heiz_P_ist","val_direkt":1,"datatype":"int"},
+"Heiz/DI/Solar_P_ist" :{"name":"SolarP_ist","val_direkt":1,"datatype":"int"},
+"Ofen/stat/Kesselpumpe" :{"name":"OfenP_ist","val_direkt":1,"datatype":"int"},
+"Heiz/stat/Heiz_HA0" :{"name":"HeizP_HA0_ist","val_direkt":1,"datatype":"int"},
 "Heiz/cmd/Heiz_HA0" :{"name":"HeizP_HA0_cmd","val_direkt":1,"datatype":"int"},
 "Solar/DS1820/28577495F0013CF3" :{"name":"ThSol_temp1"},
 "Solar/DS1820/28B77D95F0013C29" :{"name":"ThSol_temp2"},
@@ -196,7 +199,7 @@ for chart_nr in SENSOR_config_array["chartDBStuff"]:
 # Kühlen     : in Übergangszeit muss eventuell der Pufferspeicher
 #              gekühlt werden, indem über das Dachgekühlt wird
 temp={}
-temp.update({"old_status":-999})
+temp.update({"HeizHA0_merk":-988})
 # Temperieren : in Wintermonaten vor dem Aufstehen Heizung EIN
 temp["on"]={"month":11}					## November
 temp["off"]={"month":3}					## Feber
@@ -278,12 +281,14 @@ mqtt_client.loop_start()
 ##                 HAUPTPROGRAMM                  ##
 ####################################################
 ####################################################
-old_seconds_cloudGET=time.time()
+old_10seconds=time.time()
 ###logging.info(__file__+' -> startup process -> enter while 1==1')
 SolP_Intervallstart_time = 0
 SolP_run=False
 SolP_timeset=-999				## First run
 # HeizP_vor_Temperierung=-999		## First run
+t_WZ_t=0.0
+
 while 1==1 :
 	#### Textteile für Bildschirmausgabe
 	temp[0]="          noch "
@@ -307,25 +312,29 @@ while 1==1 :
 		###    Erzeuge dann mit SensorClass den SQL String für die
 		###    Signale in passender Tabelle   laut ChartNr
 		if time.time()- old_seconds_impuls > time_trigger :
-			# # print ("----------- do SQL  ------------")
 			###logging.info('running DB save impuls')
 			SENSOR_config_array["chartDBStuff"][chart_nr]["savetime"]=time.time()
 			DBtable=SENSOR_config_array["chartDBStuff"][chart_nr]["DBTable_name"]
-			# # print(DBtable)
-			# ret=A10_sensors_class.make_DataString(chart_nr)
-			ret=mod_sql.make_SQLstring(chart_nr,SENSOR_config_array)
+
 			if any(debug_level_str in {"lokalSQL","remoteSQL"} for debug_level_str in builtins.debug_info_level):
 				##  lokalSQL remoteSQL Temperierung cooling frost mega2560 doorbell mqtt_publish mqtt print_incomming_data
-				print ("###############  in  MAIN while -> SQL    ##")
-				print (ret["sql_string"])
-				print ()
-
+				print()
+				print()
+				print ("###############"+__file__+":"+str(inspect.currentframe().f_lineno)+" in  MAIN while -> cloud_send_data SQL for CHART  #"+str(chart_nr))
+			ret=mod_sql.make_SQLstring(chart_nr,SENSOR_config_array)
 			A10_localDB.execute_sql(ret["sql_string"])
 			IoTCloud.cloud_send_data(ret)
+			if any(debug_level_str in {"lokalSQL","remoteSQL"} for debug_level_str in builtins.debug_info_level):
+				##  lokalSQL remoteSQL Temperierung cooling frost mega2560 doorbell mqtt_publish mqtt print_incomming_data
+				print ("                  SQL String="+ret["sql_string"])
+				print ("###############  -> cloud_send_data SQL END   ##")
+				print ()
+				print ()
+
 	######################################################
 
-	if any(debug_level_str in {"lokalSQL","remoteSQL"} for debug_level_str in debug_info_level):
-		print('{0:>30} {1:<30} '.format(temp[0],temp[1])+temp[2])
+	# if any(debug_level_str in {"lokalSQL","remoteSQL"} for debug_level_str in debug_info_level):
+	print('{0:>30} {1:<30} '.format(temp[0],temp[1])+temp[2])
 
 	#############################
 	####   SolarP override  #####
@@ -373,75 +382,119 @@ while 1==1 :
 					"     Frostschutz_Grenztemp=",Frostschutz_Grenztemp, \
 					)
 
-
-	####      cooling Schutz   ####
 	###############################
-	# if time.time()- old_seconds_cloudGET > cloud_call_intervall :
-		# if "cooling" in debug_info_level :   ##  lokalSQL remoteSQL Temperierung cooling frost mega2560 doorbell mqtt_publish
-		# logging.info('running cloud')
-		# #rrr=5/0
-		# old_seconds_cloudGET=time.time()
-		# mqtt_message=IoTCloud.fetch_cloud_data("SolarP_override")
+	####    10Sekunden Impuls  ####
+	###############################
+	if time.time()- old_10seconds > 10 :
 
-		# print('***********************************************')
-		# if isinstance(mqtt_message, int):   ## The isinstance() function returns True if the specified object is of the specified type, otherwise False.
-			# mqtt_message = str(mqtt_message)
-		# print(__file__+' -> main -> SolarP override'+mqtt_message)
-		# logging.info(__file__+' -> main got value-> SolarP override'+mqtt_message)
-		# if (mqtt_message!=-999):
-			# # topic=SENSOR_config_array["Control"]["Temperierung"]["topic"]["pub"]
-			# # mqtt_publish(mqtt_client,"Heiz/cmd/SolarP",mqtt_message,"int")
-			# mqtt_publish(mqtt_client,"Heiz/cmd/SolarP_override",mqtt_message,"int")
+		###############################
+		####    DS1820 on GPIO     ####
+		debug_str="gpio"
+		if any(debug_level_str in {debug_str,""} for debug_level_str in builtins.debug_info_level):
+			##  lokalSQL remoteSQL Temperierung cooling frost mega2560 doorbell mqtt_publish mqtt print_incomming_data cloud
+			print()
+			print()
+			print ("###############"+__file__+":"+str(inspect.currentframe().f_lineno)+"  -> cooling Schutz START   ##")
+		t_WZ_t=mod_DS1820.get_gpio_ds1820()
+		mod_mqtt.mqtt_publish(mqtt_client,"nodered/DS1820/10-000802e0ff5e",t_WZ_t,"")
+		old_10seconds=time.time()
+		if any(debug_level_str in {debug_str,""} for debug_level_str in builtins.debug_info_level):
+			##  lokalSQL remoteSQL Temperierung cooling frost mega2560 doorbell mqtt_publish mqtt print_incomming_data cloud
+			print ("###############  -> cooling Schutz END   ##")
+			print()
+			print()
 
-		# mqtt_message=IoTCloud.fetch_cloud_data("Heiz_uC_reset")
-		# if (mqtt_message!=-999):
-			# # topic=SENSOR_config_array["Control"]["Temperierung"]["topic"]["pub"]
-			# mqtt_publish(mqtt_client,"Heiz/cmd/Heiz_uC_reset",mqtt_message,"int")
+		###############################
+		####      cooling Schutz   ####
+		debug_str="cloud"
+		if any(debug_level_str in {debug_str,""} for debug_level_str in builtins.debug_info_level):
+			##  lokalSQL remoteSQL Temperierung cooling frost mega2560 doorbell mqtt_publish mqtt print_incomming_data cloud
+			print()
+			print()
+			print ("###############"+__file__+":"+str(inspect.currentframe().f_lineno)+"  -> cooling Schutz START   ##")
+		mqtt_message=IoTCloud.fetch_cloud_data("SolarP_override")
+		if isinstance(mqtt_message, int):   ## The isinstance() function returns True if the specified object is of the specified type, otherwise False.
+			mod_mqtt.mqtt_message = str(mqtt_message)
+		if any(debug_level_str in {debug_str,""} for debug_level_str in builtins.debug_info_level):
+			##  lokalSQL remoteSQL Temperierung cooling frost mega2560 doorbell mqtt_publish mqtt print_incomming_data cloud
+			# print(inspect.stack()[1][1],":",inspect.stack()[1][2],":",inspect.stack()[1][3])
+			print("               "+__file__+":"+str(inspect.currentframe().f_lineno)+"  -> SolarP override fetch="+mqtt_message)
+			# logging.info(__file__+' -> main got value-> SolarP override'+mqtt_message)
+		if (mqtt_message!=-999):
+			# topic=SENSOR_config_array["Control"]["Temperierung"]["topic"]["pub"]
+			# mqtt_publish(mqtt_client,"Heiz/cmd/SolarP",mqtt_message,"int")
+			mod_mqtt.mqtt_publish(mqtt_client,"Heiz/cmd/SolarP_override",mqtt_message,"int")
+		if any(debug_level_str in {debug_str,""} for debug_level_str in builtins.debug_info_level):
+			print ("############### -> cooling Schutz END    ####")
+			print()
+			print()
 
-	##################################
-	####   Temperierung (Bad/WZ)  ####
-	##################################
-	if any(debug_level_str in {"Temperierung",""} for debug_level_str in builtins.debug_info_level):
-			##  lokalSQL remoteSQL Temperierung cooling frost mega2560 doorbell mqtt_publish
-		print()
-		print ("Temperierung START    ####")
-		# for topic in SENSOR_config_array["Sensors"]:
-			# print()
-			# print ("Temperierung: test ->",SENSOR_config_array["Sensors"][topic]["chart_data"])
-			# for Sensor_topic in SENSOR_config_array["Sensors"][topic]:
-				# print("Temperierung:topic=",topic, " ",Sensor_topic)
-			# pass
 
-	topic=SENSOR_config_array["Control"]["Temperierung"]["topic"]["pub"]
-	HeizP_temp = SENSOR_config_array["Sensors"][topic]["values"]["val_aktuell"]
-	if any(debug_level_str in {"Temperierung",""} for debug_level_str in builtins.debug_info_level):
-		print ('            Temperierung:topic=',topic,'  val_aktuell=',HeizP_temp)
-	if SENSOR_config_array["Control"]["Temperierung"]["old_status"] == -999 and SENSOR_config_array["Sensors"][topic]["values"]["val_aktuell"] != -111:
-			SENSOR_config_array["Control"]["Temperierung"]["old_status"]=SENSOR_config_array["Sensors"][topic]["values"]["val_aktuell"]
-	if any(debug_level_str in {"Temperierung",""} for debug_level_str in builtins.debug_info_level):
-		print ("            Temperierung::topic=",topic,"  old_status=",SENSOR_config_array["Control"]["Temperierung"]["old_status"])
-	if SENSOR_config_array["Control"]["Temperierung"]["old_status"] != -999 :
-		Temperierung_cmd=Control.check_Temperierung_time()
+		##################################
+		####   Temperierung (Bad/WZ)  ####
+		debug_str="Temperierung"
+		if any(debug_level_str in {debug_str,""} for debug_level_str in builtins.debug_info_level):
+			##  lokalSQL remoteSQL Temperierung cooling frost mega2560 doorbell mqtt_publish mqtt print_incomming_data cloud
+			print()
+			print()
+			print ("###############"+__file__+":"+str(inspect.currentframe().f_lineno)+"  in  MAIN while -> Temperierung START   ##")
+
 		topic=SENSOR_config_array["Control"]["Temperierung"]["topic"]["pub"]
-		if any(debug_level_str in {"Temperierung",""} for debug_level_str in builtins.debug_info_level):
-			print ("            Temperierung:Temperierung_cmd=",Temperierung_cmd)
-		if Temperierung_cmd == 1 :	## Temperierung soll einschalten
-			SENSOR_config_array["Control"]["Temperierung"]["old_status"]=SENSOR_config_array["Sensors"][topic]["values"]["val_aktuell"]
-			HeizP_cmd = "1"		## HAND
-			mod_mqtt.mqtt_publish(mqtt_client,topic,HeizP_cmd,"")
-		if Temperierung_cmd == -1 :	## Temperierung soll ausschalten
-			HeizP_cmd = SENSOR_config_array["Control"]["Temperierung"]["old_status"]
-			mod_mqtt.mqtt_publish(mqtt_client,topic,HeizP_cmd,"")
-		if "Temperierung" in debug_info_level :   ##  lokalSQL remoteSQL Temperierung cooling frost mega2560 doorbell mqtt_publish
-			if any(debug_level_str in {"Temperierung",""} for debug_level_str in builtins.debug_info_level):
-				print("            Temperierung: Heizfenster -> Heizbefehl =",Temperierung_cmd, \
-					"       HeizP_cmd/Temperierung_cmd=",Temperierung_cmd, \
-					"       HeizP_cmd old=",SENSOR_config_array["Control"]["Temperierung"]["old_status"])
+		HeizHA0_ist = SENSOR_config_array["Sensors"]["Heiz/stat/Heiz_HA0"]["values"]["val_aktuell"]
+		if any(debug_level_str in {debug_str,""} for debug_level_str in builtins.debug_info_level):
+			print ('            Temperierung : (SENSOR_config_array["Control"]["Temperierung"]["HeizHA0_merk"]) =',SENSOR_config_array["Control"]["Temperierung"]["HeizHA0_merk"])
+			print ('            Temperierung : (topic=',topic,' Sensor...["Heiz/stat/Heiz_HA0"]["values"][val_aktuell])  HeizHA0_ist =',HeizHA0_ist)
+			print()
 
-	if "Temperierung" in debug_info_level :   ##  lokalSQL remoteSQL Temperierung cooling frost mega2560 doorbell mqtt_publish
-		print ("Temperierung END    ####")
-	####     Temperierung END    ####
-	#################################
+		if SENSOR_config_array["Control"]["Temperierung"]["HeizHA0_merk"] == -988 and SENSOR_config_array["Sensors"]["Heiz/stat/Heiz_HA0"]["values"]["val_aktuell"] != -111:
+						## siehe A10_mod_sensor.prepare_sensor_array()
+			##  Wenn 1. Durchlauf und ein reguläres Datum von mqtt für HeizHA0_ist vorhanden ###
+			SENSOR_config_array["Control"]["Temperierung"]["HeizHA0_merk"]=HeizHA0_ist
+			if any(debug_level_str in {debug_str,""} for debug_level_str in builtins.debug_info_level):
+				print ("            Temperierung: 1. Durchlauf HeizHA0_merk =  HeizHA0_ist")
+		else:
+			if any(debug_level_str in {debug_str,""} for debug_level_str in builtins.debug_info_level):
+				print ("            Temperierung: nicht 1. Durchlauf oder noch kein gültiges Datum vom mqtt stat/HeizP_HA0_ist")
+
+		if SENSOR_config_array["Control"]["Temperierung"]["HeizHA0_merk"] != -988 :
+			#### Wenn nicht 1. Durchlauf ####
+			if any(debug_level_str in {debug_str,""} for debug_level_str in builtins.debug_info_level):
+				print ("            Temperierung: nicht 1. Durchlauf (=>und schon reguläres Datum von mqtt HeizHA0_ist vorhanden)")
+			Temperierung_cmd=Control.check_Temperierung_time()
+			# topic=SENSOR_config_array["Control"]["Temperierung"]["topic"]["pub"]
+			if any(debug_level_str in {debug_str,""} for debug_level_str in builtins.debug_info_level):
+				print ("            "+__file__+":"+str(inspect.currentframe().f_lineno)+"->Temperierung:Temperierung_cmd=",Temperierung_cmd)
+			if Temperierung_cmd == 1 :	## Temperierung Einschalten
+				SENSOR_config_array["Control"]["Temperierung"]["HeizHA0_merk"]=HeizHA0_ist
+				HeizHA0_cmd = "1"		## HAND
+				mod_mqtt.mqtt_publish(mqtt_client,topic,HeizHA0_cmd,"")
+				mod_mqtt.mqtt_publish(mqtt_client,"Heiz/cmd/info/HeizP_cmd","a"+HeizHA0_cmd,"")
+				if any(debug_level_str in {debug_str,""} for debug_level_str in builtins.debug_info_level):
+					print("            Temperierung: Heizfenster -> Heizbefehl =",Temperierung_cmd, \
+								" es wird via MQTT HeizHA0_cmd geschickt. ",topic," ",HeizHA0_cmd)
+			if Temperierung_cmd == -1 :	## Temperierung Ausschalten
+				HeizHA0_cmd = SENSOR_config_array["Control"]["Temperierung"]["HeizHA0_merk"]
+				mod_mqtt.mqtt_publish(mqtt_client,topic,HeizHA0_cmd,"")
+				mod_mqtt.mqtt_publish(mqtt_client,"Heiz/cmd/info/HeizP_cmd","b"+HeizHA0_cmd,"")
+				if any(debug_level_str in {debug_str,""} for debug_level_str in builtins.debug_info_level):
+					print("            Temperierung: Heizfenster -> Heizbefehl =",Temperierung_cmd, \
+								" es wird via MQTT HeizHA0_cmd retour gesetzt. ",topic," ",HeizHA0_cmd)
+			if Temperierung_cmd == 0 :	## Temperierung nixtun
+				if any(debug_level_str in {debug_str,""} for debug_level_str in builtins.debug_info_level):
+					print("            Temperierung: Heizfenster -> Heizbefehl =",Temperierung_cmd, \
+								" es wird nix gemacht")
+		else:
+			if any(debug_level_str in {debug_str,""} for debug_level_str in builtins.debug_info_level):
+				print ("            Temperierung: Temperierung (HeizHA0_merk)=",SENSOR_config_array["Control"]["Temperierung"]["HeizHA0_merk"])
+				print ("            Temperierung: 1.Durchlauf!!!")
+				print()
+
+		if any(debug_level_str in {debug_str,""} for debug_level_str in builtins.debug_info_level):
+			print ("############### -> Temperierung END    ####")
+			print()
+			print()
+		####     Temperierung END    ####
+		###############################
 
 	sleep(1) # Stop maxing out CPU
 	#print ("\n------ ca 1 Sekunde\n")
