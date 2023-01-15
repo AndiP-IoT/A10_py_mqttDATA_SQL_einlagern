@@ -158,6 +158,9 @@ class deal_with_sensorData:
 		if "factor" in self.SensorData[topic]:
 			val=val / self.SensorData[topic]["factor"]
 		self.SensorData[topic]['val_aktuell']=val
+		if topic == "Heiz/stat/Heiz_HA0":
+			print("EEBUG2: ",topic,"=",self.SensorData[topic]['val_aktuell'])
+			pass
 
 		temp1="data_insert -> "+topic+" - "+self.SensorData[topic]["name"]
 		temp2=bcolors.OK
