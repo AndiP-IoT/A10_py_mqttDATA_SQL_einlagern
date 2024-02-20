@@ -3,7 +3,9 @@
 import builtins
 import logging
 import inspect
-import mariadb
+import sqlite3
+#import mysql
+# import mariadb
 import sys
 from collections import defaultdict
 import time
@@ -47,18 +49,19 @@ class ChartData_DBTables:
 		"""
  		# Connect to MariaDB Platform
 		# self.config_data=dict(config_data)
-		try: self.mariadb_connection = mariadb.connect(
-							user=config_data["user"],
-							password=config_data["password"],
-							host=config_data["host"],
-							port=config_data["port"],
+		# try: self.mariadb_connection = mariadb.connect(
+		try: self.db_connection = sqlite3.connect(
+							# user=config_data["user"],
+							# password=config_data["password"],
+							# host=config_data["host"],
+							# port=config_data["port"],
 							database=config_data["database"]
 						)
-		except mariadb.Error as err:
+		except self.sqlite3.Error as err:
 			print("Something went wrong: {}".format(err))
 			sys.exit(1)
-		self.mariadb_sql = self.mariadb_connection.cursor()
-		self.mariadb_connection.autocommit = True
+		self.db_sql = self.db_connection.cursor()
+		# self.db_connection.autocommit = True
 
 	def get_col_headers(self,DBtable_name):
 		"""
@@ -82,26 +85,21 @@ class ChartData_DBTables:
 		# self.colnames = [desc[0] for desc in self.mariadb_sql.description]
 		# print (self.colnames)
 		# print (DBtable)
-		sql = "SHOW TABLES LIKE '"+DBtable_name+"'"
-		self.mariadb_sql.execute(sql)
-		result = self.mariadb_sql.fetchone()
-		# print ("Wertzuioiuztrertzuztr")
-		if result:
-			# print ("OK")
-			self.mariadb_sql.execute("Select * FROM "+DBtable_name+" LIMIT 0")
-			self.colnames = [desc[0] for desc in self.mariadb_sql.description]
-			# for Sensor_topic in self.colnames:
-				# print ("wwww",Sensor_topic)
-			# for Sensor_topic in self.SensorData:
-				# if self.SensorData[Sensor_topic]["name"] in self.colnames:
-					# print ("gefunden")
-				# print (Sensor_topic)
+		# self.db_sql.execute("SELECT name FROM sqlite_master WHERE type='table';")
+		self.db_sql.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name = '"+DBtable_name+"';")
+		# print(self.db_sql.fetchall())
+		table_exist=0
+		for name in self.db_sql.fetchall():
+			print("fields in #",DBtable_name,"# -> ")
+			print("#",name[0],"#")
+			# print ("ja")
+			table_exist=1
+			self.db_sql.execute("Select * FROM "+DBtable_name+" LIMIT 0 ")
+			self.colnames = [desc[0] for desc in self.db_sql.description]
+			print (self.colnames)
 			return self.colnames
-			# there is a table named .....
-		else:
-			# print ("NoNoNo")
-			return 0
-			# there are no tables named .....
+		# print ("no")
+		return 0
 
 	def execute_sql(self,sql_string):
 		"""
@@ -112,8 +110,11 @@ class ChartData_DBTables:
 			sql_string : str
 				The SQL string itselfs
 		"""
-		self.mariadb_sql.execute(
+		print ("                     "+__file__+":"+str(inspect.currentframe().f_lineno)+	" -> execute_sql --> SQL -> DB\n")
+		print ("###############"+__file__+":"+str(inspect.currentframe().f_lineno)+	" --> "+sql_string)
+		print ("wertzuiopoiuztrewertzuiuztre",sql_string)
+		self.db_sql.execute(
 			sql_string
 		)
-		self.mariadb_connection.commit()
+		self.db_connection.commit()
 

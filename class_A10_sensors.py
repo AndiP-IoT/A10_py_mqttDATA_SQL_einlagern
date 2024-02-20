@@ -8,6 +8,7 @@ import time
 import copy
 
 class deal_with_sensorData:
+	global SENSOR_NaN
 	"""
 	A class to deal with DATA comming in unregularily timeintervals
 	holding the maxValue in this timeinterval to store in DB for charts.
@@ -38,12 +39,13 @@ class deal_with_sensorData:
 		self.SENSOR_config_array_generic=defaultdict(set)
 		self.SENSOR_config_array_generic=config_data["SENSOR_config_array_generic"]
 		self.SensorMemory_prototype=defaultdict(set)
-		self.SensorMemory_prototype["valData"]={"val_max":-100}
+		self.SensorMemory_prototype["valData"]={"val_max":SENSOR_NaN}
 
 		# self.prepare_sensor_array()
 
 
 	def make_DataString(self,chart_nr):
+	global SENSOR_NaN
 		"""
 			Takes the data of all sensors defines in MAIN under ['Sensors']
 			SENSOR_config_array_generic["Sensors"] part
@@ -76,7 +78,7 @@ class deal_with_sensorData:
 					##       SensorData["topic/path"]["val_direkt"]=1
 					## we always want the last known value - do nothing
 				if not "val_direkt" in self.SensorData[Sensor_topic] :
-					self.SensorData[Sensor_topic]["chart_data"][chart_nr]["val_max"]=-100
+					self.SensorData[Sensor_topic]["chart_data"][chart_nr]["val_max"]=SENSOR_NaN
 			# if len(cloud_string)>0:
 			cloud_string=cloud_string+"}"
 			# }

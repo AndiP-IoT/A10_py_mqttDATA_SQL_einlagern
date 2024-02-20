@@ -11,6 +11,7 @@ def prepare_sensor_array(SENSOR_config_array):
 		----------
 		none
 	"""
+	global SENSOR_NaN
 	# # print("\n\n##########  prepare_sensorMemory   #################")
 	Sensor_temp={}
 	print("#################    sub->prepare_sensor_array")
@@ -23,7 +24,7 @@ def prepare_sensor_array(SENSOR_config_array):
 		####			dessen Inhalt dann in die DB eingetragen wird
 		####			max_val oder direkt_val oder Mittelwert oder .....
 		for chart_nr in SENSOR_config_array["chartDBStuff"]:
-			Sensor_temp[chart_nr]={"val_for_chart":-100}
+			Sensor_temp[chart_nr]={"val_for_chart":SENSOR_NaN}
 		SENSOR_config_array["Sensors"][Sensor_topic]["chart_data"]=copy.deepcopy(Sensor_temp)
 
 def get_one_sensor(topic,SENSOR_config_array):
@@ -40,6 +41,7 @@ def get_one_sensor(topic,SENSOR_config_array):
 		val : string
 			Actual value of this sensor
 	"""
+	global SENSOR_NaN
 	# print([SENSOR_config_array["Sensors"][topic]])
 	try:
 		if topic in SENSOR_config_array["Sensors"] :
@@ -47,5 +49,5 @@ def get_one_sensor(topic,SENSOR_config_array):
 		return SENSOR_config_array["Sensors"][topic]["chart_data"][1]["val_for_chart"]
 		# return 555
 	except:
-		return -100
+		return SENSOR_NaN
 	########  ACHTUNG : das Topic muß in DB eingetragen sein !!!!!

@@ -62,28 +62,28 @@ class iot_cloud:
 
 	def cloud_send_data(self,myobj):
 		url = "http://mqtt.scienceontheweb.net/test.php"
-		if any(debug_level_str in {"remoteSQL"} for debug_level_str in builtins.debug_info_level):
+		if any(debug_level_str in {"remoteSQL",""} for debug_level_str in builtins.debug_info_level):
 			##  lokalSQL remoteSQL Temperierung cooling frost mega2560 doorbell mqtt_publish
 			print ("               ##############   "+__file__+":"+str(inspect.currentframe().f_lineno)+" -> cloud_send_data START -->url",url)
 		if (self.check_site_exist(url)):
 			try:
 				r = requests.post(url,data=myobj)
-				if any(debug_level_str in {"remoteSQL"} for debug_level_str in builtins.debug_info_level):
+				if any(debug_level_str in {"remoteSQL",""} for debug_level_str in builtins.debug_info_level):
 					##  lokalSQL remoteSQL Temperierung cooling frost mega2560 doorbell mqtt_publish
 					print ("                               -> cloud_send_data-->requests.post",r)
 				pass
 			except requests.exceptions.RequestException as e:  # This is the correct syntax
-				if any(debug_level_str in {"remoteSQL"} for debug_level_str in builtins.debug_info_level):
+				if any(debug_level_str in {"remoteSQL",""} for debug_level_str in builtins.debug_info_level):
 					##  lokalSQL remoteSQL Temperierung cooling frost mega2560 doorbell mqtt_publish
 					print ("                                   -> cloud_send_data-->xxxxxxxxxxxxxrequest error")
 				###logging.debug(("sub:cloud_send_data->",e)
-		if any(debug_level_str in {"remoteSQL"} for debug_level_str in builtins.debug_info_level):
+		if any(debug_level_str in {"remoteSQL",""} for debug_level_str in builtins.debug_info_level):
 			##  lokalSQL remoteSQL Temperierung cooling frost mega2560 doorbell mqtt_publish
 			print ("               ##############    "+__file__+":"+str(inspect.currentframe().f_lineno)+" ->cloud_data sent END")
 
 
 	def check_site_exist(self, url):
-		if any(debug_level_str in {"remoteSQL"} for debug_level_str in builtins.debug_info_level):
+		if any(debug_level_str in {"remoteSQL",""} for debug_level_str in builtins.debug_info_level):
 			##  lokalSQL remoteSQL Temperierung cooling frost mega2560 doorbell mqtt_publish
 			print ("               ##############    "+__file__+":"+str(inspect.currentframe().f_lineno)+" -> check_site_exist START-->url",url)
 		# url = url.replace("http://","")
@@ -95,12 +95,12 @@ class iot_cloud:
 			# print ("check_site_exist-->url_parts",url_parts)
 			# print ("check_site_exist-->url_parts",url_parts,url_parts.scheme,url_parts.netloc)
 			request = requests.head("://".join([url_parts.scheme, url_parts.netloc]))
-			if any(debug_level_str in {"remoteSQL"} for debug_level_str in builtins.debug_info_level):
+			if any(debug_level_str in {"remoteSQL",""} for debug_level_str in builtins.debug_info_level):
 				##  lokalSQL remoteSQL Temperierung cooling frost mega2560 doorbell mqtt_publish
 				print ("               ##############    "+__file__+":"+str(inspect.currentframe().f_lineno)+" -> check_site_exist END --> OK")
 			return True
 		except:
-			if any(debug_level_str in {"remoteSQL"} for debug_level_str in builtins.debug_info_level):
+			if any(debug_level_str in {"remoteSQL",""} for debug_level_str in builtins.debug_info_level):
 				##  lokalSQL remoteSQL Temperierung cooling frost mega2560 doorbell mqtt_publish
 				print ("                ##############    "+__file__+":"+str(inspect.currentframe().f_lineno)+" -> check_site_exist END -->Oh no, conection error")
 			###logging.debug(("sub:check_site_exist->Oh no, conection error")
@@ -108,7 +108,7 @@ class iot_cloud:
 
 
 	def fetch_cloud_data(self,topic):
-		if any(debug_level_str in {"remoteSQL"} for debug_level_str in builtins.debug_info_level):
+		if any(debug_level_str in {"remoteSQL",""} for debug_level_str in builtins.debug_info_level):
 			print ("               ##############    "+__file__+":"+str(inspect.currentframe().f_lineno)+" -> fetch_cloud_data START")
 		ploads="show_sensor="+topic
 		url = "http://mqtt.scienceontheweb.net/test.php"
@@ -121,18 +121,18 @@ class iot_cloud:
 			# print('fetch_cloud_data--->URL OK')
 			try:
 				retour = requests.get(url, headers=self.headers,params=ploads,timeout=10)
-				if any(debug_level_str in {"remoteSQL"} for debug_level_str in builtins.debug_info_level):
+				if any(debug_level_str in {"remoteSQL",""} for debug_level_str in builtins.debug_info_level):
 					##  lokalSQL remoteSQL Temperierung cooling frost mega2560 doorbell mqtt_publish
 					print ("                                -> fetch_cloud_data--->conection OK")
 			except ConnectionResetError as exc:
-				if any(debug_level_str in {"remoteSQL"} for debug_level_str in builtins.debug_info_level):
+				if any(debug_level_str in {"remoteSQL",""} for debug_level_str in builtins.debug_info_level):
 					##  lokalSQL remoteSQL Temperierung cooling frost mega2560 doorbell mqtt_publish
 					print ("                                -> fetch_cloud_data--->Oh no, conection error", str(exc))
 					###logging.debug(("sub:fetch_cloud_data->Oh no, conection error")
 				raise
-			if any(debug_level_str in {"remoteSQL"} for debug_level_str in builtins.debug_info_level):
+			if any(debug_level_str in {"remoteSQL",""} for debug_level_str in builtins.debug_info_level):
 				print ("                                -> fetch_cloud_data--->HTTPStatus OK")
-		if any(debug_level_str in {"remoteSQL"} for debug_level_str in builtins.debug_info_level):
+		if any(debug_level_str in {"remoteSQL",""} for debug_level_str in builtins.debug_info_level):
 			print ("                                -> fetch_cloud_data->requests.get() Wert=",retour)
 		MyPythonList = eval(retour.text)
 		# print("MyPythonList ",MyPythonList, " type: ",type(MyPythonList))
@@ -151,7 +151,7 @@ class iot_cloud:
 			mqtt_massage="1"
 		else :
 			mqtt_massage="0"
-		if any(debug_level_str in {"remoteSQL"} for debug_level_str in builtins.debug_info_level):
+		if any(debug_level_str in {"remoteSQL",""} for debug_level_str in builtins.debug_info_level):
 			##  lokalSQL remoteSQL Temperierung cooling frost mega2560 doorbell mqtt_publish
 			print ("               ##############    "+__file__+":"+str(inspect.currentframe().f_lineno)+" ->fetch_cloud_data END")
 		return mqtt_massage

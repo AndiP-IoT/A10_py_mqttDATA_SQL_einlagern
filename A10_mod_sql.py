@@ -7,6 +7,8 @@ import time
 
 
 def make_SQLstring(chart_nr,SENSOR_config_array):
+	global SENSOR_NaN
+	val_temp=""
 	"""
 		Takes the data of all sensors defines in MAIN under ['Sensors']
 		config_sonstiges["Sensors"] part
@@ -30,7 +32,11 @@ def make_SQLstring(chart_nr,SENSOR_config_array):
 		if chart_nr in SENSOR_config_array["Sensors"][Sensor_topic]["chart_data"]:
 			if SENSOR_config_array["Sensors"][Sensor_topic]['name'] in SENSOR_config_array["chartDBStuff"][chart_nr]["DBTable_ColnamesNames"]:
 				sql_key=sql_key+SENSOR_config_array["Sensors"][Sensor_topic]['name']+","
-				sql_val=sql_val+str(SENSOR_config_array["Sensors"][Sensor_topic]["chart_data"][chart_nr]["val_for_chart"])+","
+				val_temp=str(SENSOR_config_array["Sensors"][Sensor_topic]["chart_data"][chart_nr]["val_for_chart"])
+				if (val_temp=="NaN"):
+					val_temp="-99"
+				# sql_val=sql_val+str(SENSOR_config_array["Sensors"][Sensor_topic]["chart_data"][chart_nr]["val_for_chart"])+","
+				sql_val=sql_val+val_temp+","
 				cloud_string=cloud_string+"'"+SENSOR_config_array["Sensors"][Sensor_topic]['name']+"':'"
 				cloud_string=cloud_string+str(SENSOR_config_array["Sensors"][Sensor_topic]["chart_data"][chart_nr]["val_for_chart"])+"',"
 				## after using the sensordata of spec. chart an sensor for SQL string
@@ -41,7 +47,7 @@ def make_SQLstring(chart_nr,SENSOR_config_array):
 				##       SensorData["topic/path"]["val_direkt"]=1
 				## we always want the last known value - do nothing
 			if not "val_direkt" in SENSOR_config_array["Sensors"][Sensor_topic] :
-				SENSOR_config_array["Sensors"][Sensor_topic]["chart_data"][chart_nr]["val_for_chart"]=-100
+				SENSOR_config_array["Sensors"][Sensor_topic]["chart_data"][chart_nr]["val_for_chart"]=SENSOR_NaN
 	cloud_string=cloud_string+"}"
 	if len(sql_key)>0:
 		sql_key=sql_key+'timestamp'

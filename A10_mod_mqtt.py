@@ -24,7 +24,7 @@ def on_mqtt_message_arrive(mqtt_client, userdata, msg):
 	### Speichere den angekommenen Wert mit Sensor_class
 	### in SensorData[topic]['val_aktuell']
 	# print (["mqtt_message received",msg.topic,msg.topic == "WF/cmd/Bell" and msg.payload.decode() == "ON",msg.payload])
-	if any(debug_level_str in {"mqtt",""} for debug_level_str in builtins.debug_info_level):
+	if any(debug_level_str in {"mqtt"} for debug_level_str in builtins.debug_info_level):
 		##  lokalSQL remoteSQL Temperierung cooling frost mega2560 doorbell mqtt_publish mqtt
 		print ("                   A10_mod_mqtt->sub:on_mqtt_message_arrive",["mqtt_message received",msg.topic,msg.payload])
 	if msg.topic == "Heiz/stat/Heiz_HA0":
@@ -150,6 +150,7 @@ def mqtt_data_insert(Sensor_topic,val_string,SENSOR_config_array):
 		val=val / SENSOR_config_array["Sensors"][Sensor_topic]["factor"]
 		SENSOR_config_array["Sensors"][Sensor_topic]["values"]['val_aktuell']=val
 
+
 	# if Sensor_topic == "Heiz/stat/Heiz_HA0":
 		# print("EEBUG44: ",val)
 		# print("EEBUG44: ",SENSOR_config_array["Sensors"][Sensor_topic]["values"]['val_aktuell'])
@@ -163,14 +164,27 @@ def mqtt_data_insert(Sensor_topic,val_string,SENSOR_config_array):
 	for chart_nr in SENSOR_config_array["Sensors"][Sensor_topic]["chart_data"]:
 		temp7=" / val_for_chart_old="+str(SENSOR_config_array["Sensors"][Sensor_topic]["chart_data"][chart_nr]["val_for_chart"])
 		if "val_direkt" in SENSOR_config_array["Sensors"][Sensor_topic]:
-			SENSOR_config_array["Sensors"][Sensor_topic]["chart_data"][chart_nr]["val_for_chart"]=val
+				SENSOR_config_array["Sensors"][Sensor_topic]["chart_data"][chart_nr]["val_for_chart"]=val
 		else:
+			if (Sensor_topic=="ESS/VenusOS/GRID/L1_P"):
+				print ()
+				print ("++!!!!!!!!!!!!!!!!!")
+				print ("###############"+__file__+":"+str(inspect.currentframe().f_lineno))
+				print (SENSOR_config_array["Sensors"][Sensor_topic]["chart_data"][chart_nr]["val_for_chart"],"  C",Sensor_topic,val)
+			if (Sensor_topic=="ESS/VenusOS/GRID/L2_P"):
+				print ()
+				print ("++!!!!!!!!!!!!!!!!!")
+				print (SENSOR_config_array["Sensors"][Sensor_topic]["chart_data"][chart_nr]["val_for_chart"],"  C",Sensor_topic,val)
 			if val > SENSOR_config_array["Sensors"][Sensor_topic]["chart_data"][chart_nr]["val_for_chart"]:
 				SENSOR_config_array["Sensors"][Sensor_topic]["chart_data"][chart_nr]["val_for_chart"]=val
 				temp6="-----> Umspeichern"
 			else:
 				pass
 		temp5=" / val_for_chart="+str(SENSOR_config_array["Sensors"][Sensor_topic]["chart_data"][chart_nr]["val_for_chart"])
+
+
+
+
 	if any(debug_level_str in {"mqtt","print_incomming_data"} for debug_level_str in builtins.debug_info_level):
 		print("Sensor_data['Sensors'][Sensor_topic]['values']['val_aktuell']",SENSOR_config_array['Sensors'][Sensor_topic]['values']['val_aktuell'],"val=",val)
 		##  lokalSQL remoteSQL Temperierung cooling frost mega2560 doorbell mqtt_publish print_incomming_data
